@@ -1,0 +1,46 @@
+version: 2
+
+models:
+  - name: slv_flight_prices
+    description: "Silver layer - Cleaned and enriched flight price data"
+    columns:
+      - name: flight_id
+        description: "Surrogate key for flight record"
+        tests:
+          - unique
+          - not_null
+
+      - name: airline
+        description: "Standardized airline name (uppercase)"
+        tests:
+          - not_null
+
+      - name: is_premium
+        description: "Standardized flag ('Yes'/'No')"
+        tests:
+          - accepted_values:
+              values: ['Yes', 'No']  # Moved up and un-nested
+
+      - name: is_last_minute
+        description: "Standardized flag ('Yes'/'No')"
+        tests:
+          - accepted_values:
+              values: ['Yes', 'No']
+
+      - name: has_high_tax
+        description: "Standardized flag ('Yes'/'No')"
+        tests:
+          - accepted_values:
+              values: ['Yes', 'No']
+
+      - name: booking_window
+        description: "Booking window classification"
+        tests:
+          - accepted_values:
+              values: ['Last Minute', 'Short Notice', 'Normal', 'Advance', 'Early Bird']
+
+      - name: time_of_day
+        description: "Time of day classification"
+        tests:
+          - accepted_values:
+              values: ['Morning', 'Afternoon', 'Evening', 'Night']

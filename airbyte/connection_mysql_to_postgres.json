@@ -1,0 +1,117 @@
+{
+  "name": "Flight Price: MySQL Staging -> PostgreSQL Analytics",
+  "sourceId": "source-mysql-staging",
+  "destinationId": "destination-postgres-analytics",
+  "syncCatalog": {
+    "streams": [
+      {
+        "stream": {
+          "name": "flight_prices_staging",
+          "jsonSchema": {
+            "type": "object",
+            "properties": {
+              "airline": {
+                "type": "string"
+              },
+              "source_code": {
+                "type": "string"
+              },
+              "source_name": {
+                "type": "string"
+              },
+              "destination_code": {
+                "type": "string"
+              },
+              "destination_name": {
+                "type": "string"
+              },
+              "departure_time": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "arrival_time": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "duration_hours": {
+                "type": "number"
+              },
+              "stopovers": {
+                "type": "integer"
+              },
+              "aircraft_type": {
+                "type": "string"
+              },
+              "class_type": {
+                "type": "string"
+              },
+              "booking_source": {
+                "type": "string"
+              },
+              "base_fare": {
+                "type": "number"
+              },
+              "tax_amount": {
+                "type": "number"
+              },
+              "total_fare": {
+                "type": "number"
+              },
+              "seasonality": {
+                "type": "string"
+              },
+              "days_before_departure": {
+                "type": "integer"
+              },
+              "discount_amount": {
+                "type": "number"
+              },
+              "is_highest_discount": {
+                "type": "integer"
+              },
+              "is_most_expensive": {
+                "type": "integer"
+              },
+              "price_sensitivity": {
+                "type": "string"
+              },
+              "convenience_score": {
+                "type": "number"
+              },
+              "affordability_score": {
+                "type": "number"
+              },
+              "overall_score": {
+                "type": "number"
+              },
+              "has_high_tax": {
+                "type": "integer"
+              },
+              "is_premium": {
+                "type": "integer"
+              },
+              "is_last_minute": {
+                "type": "integer"
+              }
+            }
+          },
+          "supportedSyncModes": [
+            "full_refresh",
+            "incremental"
+          ],
+          "defaultCursorField": []
+        },
+        "config": {
+          "syncMode": "full_refresh",
+          "destinationSyncMode": "overwrite",
+          "selected": true,
+          "primaryKey": [],
+          "cursorField": []
+        }
+      }
+    ]
+  },
+  "operationIds": [],
+  "notifySchemaChanges": true,
+  "nonBreakingSchemaUpdatesBehavior": "auto"
+}

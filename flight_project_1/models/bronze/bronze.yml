@@ -1,0 +1,19 @@
+version: 2
+
+models:
+  - name: brz_flight_prices
+    description: "Bronze layer - Raw flight price data with minimal transformation"
+    columns:
+      - name: flight_id
+        description: "Surrogate key for flight record"
+        tests:
+          - unique
+          - not_null
+      - name: airline
+        description: "Airline carrier name"
+        tests:
+          - not_null
+      - name: total_fare
+        description: "Total fare amount"
+        tests:
+          - not_null

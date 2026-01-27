@@ -1,0 +1,43 @@
+
+
+#data manipulation  
+pandas==2.3.3
+numpy==2.4.1
+
+#error handling and retries
+urllib3==1.26.18
+requests==2.31.0
+
+#databases_connectors
+sqlalchemy==2.0.45
+pymysql==1.1.1
+
+#production and analytical database
+psycopg2-binary==2.9.11
+
+#staging database
+mysql-connector-python>=8.0.33
+
+#data visualization
+matplotlib==3.7.1   
+seaborn==0.12.2
+plotly==5.13.1
+
+#data transformation
+dbt-core==1.7.4
+dbt-postgres==1.7.4
+
+#data extraction/ datasets
+kaggle==1.8.3
+tqdm==4.67.1
+kagglesdk==0.1.15
+
+# environment management
+python-dotenv==1.2.1
+
+# workflow orchestration
+# NOTE: Airflow is intentionally NOT pinned here because it is managed
+# by the docker image in docker/Dockerfile.airflow.
+
+
+

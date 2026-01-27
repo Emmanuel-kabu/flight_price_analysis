@@ -1,0 +1,58 @@
+# Data Databases for Flight Price Analysis
+# MySQL (Source) and PostgreSQL (Destination)
+# 
+# Airbyte will be managed by abctl separately
+# This compose file only manages your data databases
+#
+# Usage:
+#   docker compose -f docker-compose-databases.yml up -d
+
+services:
+  # -------------------------
+  # MySQL Staging Database (Source)
+  # -------------------------
+  mysql-staging:
+    image: mysql:8.0
+    container_name: mysql-staging-db
+    ports:
+      - "3307:3306"   # Access at localhost:3307
+    environment:
+      MYSQL_ROOT_PASSWORD: root_password
+      MYSQL_DATABASE: flight_price_analysis_staging_db
+      MYSQL_USER: staging_user
+      MYSQL_PASSWORD: staging_password
+    volumes:
+      - mysql-staging-volume:/var/lib/mysql
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot_password"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # -------------------------
+  # PostgreSQL Analytics Database (Destination)
+  # -------------------------
+  postgres-analytics:
+    image: postgres:14-alpine
+    container_name: postgres-analytics-db
+    ports:
+      - "5433:5432"   # Access at localhost:5433
+    environment:
+      POSTGRES_USER: analytics_user
+      POSTGRES_PASSWORD: analytics_password
+      POSTGRES_DB: flight_price_analysis_analytics_db
+    volumes:
+      - postgres-analytics-volume:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U analytics_user -d flight_price_analysis_analytics_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  mysql-staging-volume:
+    name: flight_price_mysql_data
+  postgres-analytics-volume:
+    name: flight_price_postgres_data

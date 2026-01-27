@@ -1,0 +1,323 @@
+# Comprehensive data pipeline for flight price analysis
+services:
+  # =============================================================================
+  # DATA EXTRACTION SERVICE 
+  # =============================================================================
+  flight-price-extractor:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: flight_price_analysis
+    environment:
+      - LOG_LEVEL=INFO
+      - PYTHONPATH=/app
+      # Database connections
+      - MYSQL_HOST=staging-mysql
+      - MYSQL_DATABASE=flight_price_analysis_staging_db
+      - MYSQL_USER=staging_user
+      - MYSQL_PASSWORD=staging_password
+      - POSTGRES_HOST=analytics-postgres
+      - POSTGRES_DATABASE=flight_price_analysis_analytics_db
+      - POSTGRES_USER=analytics_user
+      - POSTGRES_PASSWORD=analytics_password
+    volumes:
+      - ../data:/app/data
+      - ../logs:/app/logs
+      - ~/.kaggle:/app/.kaggle:ro
+    depends_on:
+      - staging-mysql
+      - analytics-postgres
+    restart: unless-stopped
+    networks:
+      - flight-analysis-network
+
+  # =============================================================================
+  # STAGING DATABASE (MySQL)
+  # =============================================================================
+  staging-mysql:
+    image: mysql:8.0
+    container_name: flight_staging_mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=root_password
+      - MYSQL_DATABASE=flight_price_analysis_staging_db
+      - MYSQL_USER=staging_user
+      - MYSQL_PASSWORD=staging_password
+    volumes:
+      - mysql_staging_data:/var/lib/mysql
+      - ../staging:/docker-entrypoint-initdb.d
+    ports:
+      - "3307:3306"
+    networks:
+      - flight-analysis-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+  # =============================================================================
+  # ANALYTICAL DATABASE (PostgreSQL)
+  # =============================================================================
+  analytics-postgres:
+    image: postgres:15-alpine
+    container_name: flight_analytics_postgres
+    environment:
+      - POSTGRES_DB=flight_price_analysis_analytics_db
+      - POSTGRES_USER=analytics_user
+      - POSTGRES_PASSWORD=analytics_password
+      - POSTGRES_INITDB_ARGS=--auth-host=scram-sha-256
+    volumes:
+      - postgres_analytics_data:/var/lib/postgresql/data
+      - ../analytics_and_prod:/docker-entrypoint-initdb.d
+    networks:
+      - flight-analysis-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U analytics_user -d flight_price_analysis_analytics_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5433:5432"
+
+  # =============================================================================
+  # DBT TRANSFORMATION SERVICE
+  # =============================================================================
+  # DBT TRANSFORMATION SERVICE 🔄
+  # =============================================================================
+  dbt-transformer:
+    image: ghcr.io/dbt-labs/dbt-postgres:1.7.4
+    container_name: flight_dbt_transformer
+    environment:
+      - DBT_PROFILES_DIR=/app/profiles
+      - DBT_PROJECT_DIR=/app/transformation
+      - DBT_LOG_LEVEL=INFO
+      # Database connections for DBT
+      - POSTGRES_HOST=localhost
+      - POSTGRES_PORT=5433
+      - POSTGRES_USER=analytics_user
+      - POSTGRES_PASSWORD=analytics_password
+      - POSTGRES_DATABASE=flight_price_analysis_analytics_db
+    volumes:
+      - ../transformation:/app/transformation
+      - ../configuration:/app/profiles
+      - dbt_logs:/app/logs
+      - ../data:/app/data  # Access to raw data if needed
+    working_dir: /app/transformation
+    depends_on:
+      analytics-postgres:
+        condition: service_healthy
+      staging-mysql:
+        condition: service_healthy
+    networks:
+      - flight-analysis-network
+    restart: unless-stopped
+    
+    # DBT commands (can be overridden)
+    # Options: ["dbt", "run"], ["dbt", "test"], ["dbt", "docs", "generate"]
+    command: ["dbt", "run", "--profiles-dir", "/app/profiles"]
+    
+    # Health check to monitor DBT service
+    healthcheck:
+      test: ["CMD-SHELL", "dbt --version || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # =============================================================================
+  # AIRFLOW SERVICES FOR ORCHESTRATION
+  # =============================================================================
+  
+  # Redis for Airflow Celery
+  airflow-redis:
+    image: redis:7.2-alpine
+    container_name: flight_airflow_redis
+    volumes:
+      - redis_data:/data
+    networks:
+      - flight-analysis-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 30s
+      retries: 50
+      start_period: 30s
+
+  # Airflow PostgreSQL metadata database
+  airflow-postgres:
+    image: postgres:15-alpine
+    container_name: flight_airflow_postgres
+    environment:
+      - POSTGRES_USER=airflow
+      - POSTGRES_PASSWORD=airflow
+      - POSTGRES_DB=airflow
+    volumes:
+      - postgres_airflow_data:/var/lib/postgresql/data
+    networks:
+      - flight-analysis-network
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "airflow"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Airflow Webserver
+  airflow-webserver:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.airflow
+    container_name: flight_airflow_webserver
+    environment: &airflow-common-env
+      AIRFLOW__CORE__EXECUTOR: CeleryExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-postgres:5432/airflow
+      AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@airflow-postgres:5432/airflow
+      AIRFLOW__CELERY__BROKER_URL: redis://airflow-redis:6379/0
+      AIRFLOW__CORE__FERNET_KEY: 81HqDtbqAywKSOumSHMpQfOItPLKSwBzY4k5a4K5-2o=
+      AIRFLOW__WEBSERVER__SECRET_KEY: 81HqDtbqAywKSOumSHMpQfOItPLKSwBzY4k5a4K5-2o=
+      AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "true"
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__WEBSERVER__EXPOSE_CONFIG: "true"
+      AIRFLOW__WEBSERVER__RBAC: "true"
+      PIPELINE_PROJECT_ROOT: /opt/airflow/project
+      _PIP_ADDITIONAL_REQUIREMENTS: apache-airflow-providers-postgres apache-airflow-providers-mysql
+      # Internal networking for Docker pipeline
+      MYSQL_HOST: staging-mysql
+      MYSQL_PORT: 3306
+      MYSQL_DATABASE: flight_price_analysis_staging_db
+      MYSQL_USER: staging_user
+      MYSQL_PASSWORD: staging_password
+      POSTGRES_HOST: analytics-postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DATABASE: flight_price_analysis_analytics_db
+      POSTGRES_USER: analytics_user
+      POSTGRES_PASSWORD: analytics_password
+      AIRBYTE_API_URL: http://host.docker.internal:8000/api/v1
+    volumes:
+      - ../orchestration/dags:/opt/airflow/dags
+      - ..:/opt/airflow/project
+      - ../logs:/opt/airflow/logs
+      - ../configuration:/opt/airflow/config
+    ports:
+      - "8080:8080"
+    depends_on:
+      - airflow-postgres
+      - airflow-redis
+    networks:
+      - flight-analysis-network
+    command: webserver
+
+  # Airflow Init (one-time DB migration + admin user)
+  # Run with: docker compose -f docker-compose.yml up airflow-init
+  airflow-init:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.airflow
+    container_name: flight_airflow_init
+    environment:
+      <<: *airflow-common-env
+      # Default admin user (override via env if desired)
+      _AIRFLOW_WWW_USER_USERNAME: ${_AIRFLOW_WWW_USER_USERNAME:-admin}
+      _AIRFLOW_WWW_USER_PASSWORD: ${_AIRFLOW_WWW_USER_PASSWORD:-admin}
+      _AIRFLOW_WWW_USER_FIRSTNAME: ${_AIRFLOW_WWW_USER_FIRSTNAME:-Admin}
+      _AIRFLOW_WWW_USER_LASTNAME: ${_AIRFLOW_WWW_USER_LASTNAME:-User}
+      _AIRFLOW_WWW_USER_EMAIL: ${_AIRFLOW_WWW_USER_EMAIL:-admin@example.com}
+    volumes:
+      - ../orchestration/dags:/opt/airflow/dags
+      - ..:/opt/airflow/project
+      - ../logs:/opt/airflow/logs
+      - ../configuration:/opt/airflow/config
+    depends_on:
+      - airflow-postgres
+      - airflow-redis
+    networks:
+      - flight-analysis-network
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        set -e
+        airflow db migrate
+        airflow users create \
+          --username "$${_AIRFLOW_WWW_USER_USERNAME:-admin}" \
+          --password "$${_AIRFLOW_WWW_USER_PASSWORD:-admin}" \
+          --firstname "$${_AIRFLOW_WWW_USER_FIRSTNAME:-Admin}" \
+          --lastname "$${_AIRFLOW_WWW_USER_LASTNAME:-User}" \
+          --role Admin \
+          --email "$${_AIRFLOW_WWW_USER_EMAIL:-admin@example.com}" \
+          || true
+        echo "Airflow init complete"
+
+  # Airflow Scheduler
+  airflow-scheduler:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.airflow
+    container_name: flight_airflow_scheduler
+    environment:
+      <<: *airflow-common-env
+    volumes:
+      - ../orchestration/dags:/opt/airflow/dags
+      - ..:/opt/airflow/project
+      - ../logs:/opt/airflow/logs
+      - ../configuration:/opt/airflow/config
+    depends_on:
+      - airflow-postgres
+      - airflow-redis
+    networks:
+      - flight-analysis-network
+    command: scheduler
+
+  # Airflow Worker
+  airflow-worker:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.airflow
+    container_name: flight_airflow_worker
+    environment:
+      <<: *airflow-common-env
+    volumes:
+      - ../orchestration/dags:/opt/airflow/dags
+      - ..:/opt/airflow/project
+      - ../logs:/opt/airflow/logs
+      - ../configuration:/opt/airflow/config
+      - ~/.kaggle:/home/airflow/.kaggle:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - airflow-postgres
+      - airflow-redis
+    networks:
+      - flight-analysis-network
+    command: celery worker
+
+  # Airflow Flower (monitoring)
+  airflow-flower:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.airflow
+    container_name: flight_airflow_flower
+    environment:
+      <<: *airflow-common-env
+    volumes:
+      - ../logs:/opt/airflow/logs
+    ports:
+      - "5555:5555"
+    depends_on:
+      - airflow-redis
+    networks:
+      - flight-analysis-network
+    command: celery flower
+
+# =============================================================================
+# NETWORKS AND VOLUMES
+# =============================================================================
+networks:
+  flight-analysis-network:
+    driver: bridge
+
+volumes:
+  # Database volumes
+  mysql_staging_data:
+  postgres_analytics_data:
+  postgres_airflow_data:
+  redis_data:
+  
+  # Application volumes
+  dbt_logs:

@@ -1,0 +1,82 @@
+version: 2
+
+models:
+  - name: fact_flight_bookings
+    description: "Central fact table containing all flight booking transactions"
+    columns:
+      - name: flight_id
+        description: "Unique flight booking identifier"
+        tests:
+          - unique
+          - not_null
+
+      - name: airline_key
+        description: "Foreign key to dim_airline"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_airline')
+              field: airline_key
+
+      - name: route_key
+        description: "Foreign key to dim_route"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_route')
+              field: route_key_sk
+
+      - name: departure_date_key
+        description: "Foreign key to dim_date"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_date')
+              field: date_key
+
+      - name: total_fare
+        description: "Total fare amount (measure)"
+        tests:
+          - not_null
+
+  - name: kpi_average_fare_by_airline
+    description: "KPI: Average fare (and related fare components) by airline"
+    columns:
+      - name: airline_key
+        description: "Foreign key to dim_airline"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_airline')
+              field: airline_key
+      - name: airline_name
+        description: "Airline name"
+        tests:
+          - not_null
+      - name: avg_total_fare
+        description: "Average total fare per airline"
+      - name: booking_count
+        description: "Number of bookings per airline"
+
+  - name: kpi_booking_count_by_airline
+    description: "KPI: Booking count by airline"
+    columns:
+      - name: airline_key
+        description: "Foreign key to dim_airline"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_airline')
+              field: airline_key
+      - name: airline_name
+        description: "Airline name"
+        tests:
+          - not_null
+      - name: booking_count
+        description: "Number of bookings per airline"
+
+  - name: kpi_popular_routes
+    description: "KPI: Top source-destination routes by booking count (top 20)"
+
+  - name: kpi_seasonal_analysis
+    description: "KPI: Peak vs non-peak fare/booking comparison per airline (peak = Eid, Winter Holidays, Hajj)"

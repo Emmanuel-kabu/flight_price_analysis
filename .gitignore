@@ -1,0 +1,48 @@
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# Project venvs included in repo folder
+analytics_env/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Logs and runtime artifacts
+logs/
+**/*.log
+
+# Local data outputs (keep metadata under data/metadata)
+data/raw/
+data/processed/
+
+# Secrets and local overrides
+envs/.env
+envs/.env.local
+
+# dbt artifacts (root-level ignores in case dbt is run outside flight_project_1)
+target/
+dbt_packages/
+logs/dbt/
+
+# dbt artifacts inside the dbt project
+flight_project_1/target/
+flight_project_1/dbt_packages/
+flight_project_1/logs/
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+Desktop.ini
+.vscode/
+.idea/
+
+# Docker local volumes or temp files
+*.pid

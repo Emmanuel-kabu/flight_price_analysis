@@ -1,0 +1,58 @@
+# Airbyte Connection Configuration
+# Flight Price Analysis: MySQL → PostgreSQL Migration
+
+# Source Configuration (MySQL)
+source:
+  name: "MySQL Staging Database"
+  type: "source-mysql"
+  config:
+    host: "host.docker.internal"  # Access host machine from abctl's Kubernetes
+    port: 3307
+    database: "flight_price_analysis_staging_db"
+    username: "staging_user"
+    password: "staging_password"
+    replication_method:
+      method: "STANDARD"
+    ssl_mode:
+      mode: "preferred"
+
+# Destination Configuration (PostgreSQL)
+destination:
+  name: "PostgreSQL Analytics Database"
+  type: "destination-postgres"
+  config:
+    host: "host.docker.internal"  # Access host machine from abctl's Kubernetes
+    port: 5433
+    database: "flight_price_analysis_analytics_db"
+    username: "analytics_user"
+    password: "analytics_password"
+    schema: "public"
+    ssl_mode:
+      mode: "disable"
+
+# Connection Configuration
+connection:
+  name: "Flight Price Analysis - MySQL to PostgreSQL"
+  schedule:
+    type: "manual"  # Options: manual, basic, cron
+    # For scheduled syncs, use:
+    # type: "basic"
+    # time_unit: "hours"
+    # units: 24
+  
+  # Sync settings
+  sync_mode: "full_refresh"  # Options: full_refresh, incremental
+  destination_sync_mode: "overwrite"  # Options: overwrite, append, append_dedup
+  
+  # Namespace settings
+  namespace_definition: "destination"
+  namespace_format: "${SOURCE_NAMESPACE}"
+  
+  # Stream prefix (optional)
+  prefix: ""
+
+# Notes:
+# 1. To access host machine from Kubernetes (abctl), use "host.docker.internal"
+# 2. Alternatively, you can use the host's actual IP address
+# 3. For manual syncs, trigger via UI or API
+# 4. For scheduled syncs, uncomment and configure the schedule section

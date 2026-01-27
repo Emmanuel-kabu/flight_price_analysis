@@ -1,0 +1,65 @@
+version: 2
+
+sources:
+  - name: flight_bronze
+    description: "Bronze layer - Raw flight price data from PostgreSQL analytics database"
+    database: flight_price_analysis_analytics_db
+    schema: flight_price_analysis_staging_db
+    tables:
+      - name: flight_prices_staging
+        description: "Raw flight price data (Airbyte-loaded staging table)"
+        columns:
+          - name: airline
+            description: "Airline carrier name"
+          - name: source_code
+            description: "Source airport code"
+          - name: source_name
+            description: "Source airport full name"
+          - name: destination_code
+            description: "Destination airport code"
+          - name: destination_name
+            description: "Destination airport full name"
+          - name: departure_time
+            description: "Departure date and time"
+          - name: arrival_time
+            description: "Arrival date and time"
+          - name: duration_hours
+            description: "Flight duration in hours"
+          - name: stopovers
+            description: "Number of stops (Direct, 1 Stop, 2 Stops)"
+          - name: aircraft_type
+            description: "Type of aircraft"
+          - name: class_type
+            description: "Travel class (Economy, Business, First Class)"
+          - name: booking_source
+            description: "Booking channel"
+          - name: base_fare
+            description: "Base fare amount in BDT"
+          - name: tax_amount
+            description: "Tax and surcharge amount in BDT"
+          - name: total_fare
+            description: "Total fare amount in BDT"
+          - name: seasonality
+            description: "Season classification"
+          - name: days_before_departure
+            description: "Days between booking and departure"
+          - name: discount_amount
+            description: "Discount amount in BDT"
+          - name: is_highest_discount
+            description: "Flag for highest discount airline"
+          - name: is_most_expensive
+            description: "Flag for most expensive airline"
+          - name: price_sensitivity
+            description: "Price sensitivity category"
+          - name: convenience_score
+            description: "Convenience score (0-1)"
+          - name: affordability_score
+            description: "Affordability score (0-1)"
+          - name: overall_score
+            description: "Overall score (0-1)"
+          - name: has_high_tax
+            description: "Flag for high tax impact"
+          - name: is_premium
+            description: "Flag for premium airline"
+          - name: is_last_minute
+            description: "Flag for last minute booking"

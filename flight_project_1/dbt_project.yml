@@ -1,0 +1,26 @@
+name: flight_project_1
+
+profile: flight_project_1
+
+model-paths: ["models"]
+macro-paths: ["macros"]
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+models:
+  flight_project_1:
+    # Bronze Layer - Raw data views
+    bronze:
+      +materialized: view
+      +schema: bronze
+    
+    # Silver Layer - Cleaned & enriched views
+    silver:
+      +materialized: view
+      +schema: silver
+    
+    # Gold Layer - Dimensional model tables
+    gold:
+      +materialized: table
+      +schema: gold

@@ -1,0 +1,179 @@
+version: '3.8'
+
+# Airbyte Docker Compose for Flight Price Analysis Data Migration
+# MySQL (Staging) → PostgreSQL (Analytics)
+# 
+# Usage:
+#   docker-compose -f docker-compose-airbyte.yml up -d
+#   Then access Airbyte at http://localhost:8000
+
+services:
+  # Airbyte Webapp
+  airbyte-webapp:
+    image: airbyte/webapp:${AIRBYTE_VERSION:-latest}
+    container_name: airbyte-webapp
+    ports:
+      - "8000:80"
+    environment:
+      - REACT_APP_API_URL=http://localhost:8001
+      - AIRBYTE_DISABLED_FEATURES=notifications
+    depends_on:
+      - airbyte-api-server
+    networks:
+      - airbyte-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Airbyte API Server
+  airbyte-api-server:
+    image: airbyte/server:${AIRBYTE_VERSION:-latest}
+    container_name: airbyte-api-server
+    ports:
+      - "8001:8001"
+    environment:
+      - AIRBYTE_VERSION=${AIRBYTE_VERSION:-latest}
+      - DATABASE_HOST=airbyte-db
+      - DATABASE_PORT=5432
+      - DATABASE_USER=airbyte
+      - DATABASE_PASSWORD=airbyte
+      - DATABASE_NAME=airbyte
+      - CONFIG_ROOT=/data
+      - TRACKING_STRATEGY=segment
+      - LOG_LEVEL=INFO
+    volumes:
+      - airbyte-config-volume:/data
+      - airbyte-logs-volume:/logs
+    depends_on:
+      - airbyte-db
+    networks:
+      - airbyte-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Airbyte Worker
+  airbyte-worker:
+    image: airbyte/worker:${AIRBYTE_VERSION:-latest}
+    container_name: airbyte-worker
+    environment:
+      - AIRBYTE_VERSION=${AIRBYTE_VERSION:-latest}
+      - DATABASE_HOST=airbyte-db
+      - DATABASE_PORT=5432
+      - DATABASE_USER=airbyte
+      - DATABASE_PASSWORD=airbyte
+      - DATABASE_NAME=airbyte
+      - CONFIG_ROOT=/data
+      - LOG_LEVEL=INFO
+      - TRACKING_STRATEGY=segment
+    volumes:
+      - airbyte-config-volume:/data
+      - airbyte-logs-volume:/logs
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - airbyte-db
+    networks:
+      - airbyte-network
+    restart: unless-stopped
+
+  # Airbyte Internal Scheduler
+  airbyte-scheduler:
+    image: airbyte/scheduler:${AIRBYTE_VERSION:-latest}
+    container_name: airbyte-scheduler
+    environment:
+      - AIRBYTE_VERSION=${AIRBYTE_VERSION:-latest}
+      - DATABASE_HOST=airbyte-db
+      - DATABASE_PORT=5432
+      - DATABASE_USER=airbyte
+      - DATABASE_PASSWORD=airbyte
+      - DATABASE_NAME=airbyte
+      - CONFIG_ROOT=/data
+      - LOG_LEVEL=INFO
+      - TRACKING_STRATEGY=segment
+    volumes:
+      - airbyte-config-volume:/data
+      - airbyte-logs-volume:/logs
+    depends_on:
+      - airbyte-db
+    networks:
+      - airbyte-network
+    restart: unless-stopped
+
+  # Airbyte PostgreSQL Database (for Airbyte metadata)
+  airbyte-db:
+    image: postgres:14-alpine
+    container_name: airbyte-db
+    environment:
+      POSTGRES_USER: airbyte
+      POSTGRES_PASSWORD: airbyte
+      POSTGRES_DB: airbyte
+    volumes:
+      - airbyte-db-volume:/var/lib/postgresql/data
+    networks:
+      - airbyte-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U airbyte"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # MySQL Staging Database (source database)
+  mysql-staging:
+    image: mysql:8.0
+    container_name: mysql-staging-db
+    environment:
+      MYSQL_ROOT_PASSWORD: root_password
+      MYSQL_DATABASE: flight_price_analysis_staging_db
+      MYSQL_USER: staging_user
+      MYSQL_PASSWORD: staging_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-staging-volume:/var/lib/mysql
+    networks:
+      - airbyte-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # PostgreSQL Analytics Database (destination database)
+  postgres-analytics:
+    image: postgres:14-alpine
+    container_name: postgres-analytics-db
+    environment:
+      POSTGRES_USER: analytics_user
+      POSTGRES_PASSWORD: analytics_password
+      POSTGRES_DB: flight_price_analysis_analytics_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-analytics-volume:/var/lib/postgresql/data
+    networks:
+      - airbyte-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U analytics_user"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+networks:
+  airbyte-network:
+    driver: bridge
+
+volumes:
+  airbyte-config-volume:
+  airbyte-logs-volume:
+  airbyte-db-volume:
+  mysql-staging-volume:
+  postgres-analytics-volume:

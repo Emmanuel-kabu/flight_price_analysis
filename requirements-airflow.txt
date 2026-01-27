@@ -1,0 +1,11 @@
+# Airflow-only dependencies for local installs.
+# In Docker, most of these are already provided by the base image.
+
+apache-airflow==2.8.1
+apache-airflow-providers-postgres
+apache-airflow-providers-mysql
+apache-airflow-providers-docker
+pymysql
+cryptography
+dbt-core==1.7.4
+dbt-postgres==1.7.4
