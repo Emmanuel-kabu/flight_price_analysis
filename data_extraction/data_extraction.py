@@ -495,9 +495,8 @@ if __name__ == "__main__":
         logger.info("2. Set up Kaggle credentials in envs/.env with KAGGLE_USERNAME and KAGGLE_KEY")
 
 
-# Example usage in your pipeline:
-"""
-# Simple usage:
+
+#  usage(instantiating and calling the class):
 extractor = KaggleDataExtractor()
 dataset_path, df = extractor.load_dataset_as_dataframe("username/dataset-name")
 
@@ -506,4 +505,3 @@ extractor = KaggleDataExtractor("data/raw")
 metadata = extractor.get_dataset_metadata("username/dataset-name") 
 files = extractor.list_dataset_files("username/dataset-name")
 dataset_path = extractor.download_dataset("username/dataset-name")
-"""
