@@ -190,7 +190,7 @@ with DAG(
     dag_id="flight_price_analysis_end_to_end",
     default_args=default_args,
     description="End-to-end flight price pipeline: extract -> MySQL -> Airbyte -> Postgres -> dbt gold",
-    start_date=datetime(2025, 1, 1),
+    start_date=datetime(2026, 2 ,1),
     schedule=None,
     catchup=False,
     tags=["flight", "dbt", "airbyte"],
