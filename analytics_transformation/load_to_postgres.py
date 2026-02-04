@@ -602,9 +602,9 @@ def main():
     # Step 1: Wait for Airbyte
     logger.info("\n[Step 1] Waiting for Airbyte Server...")
     if not client.wait_for_airbyte():
-        logger.error(" Cannot proceed: Airbyte is not available after maximum retries")
-        logger.error("   Ensure: docker compose -f docker/docker-compose-unified.yml up -d")
-        logger.error("     (or: docker compose -f docker-compose-airbyte.yml up -d)")
+        logger.error("Cannot proceed: Airbyte is not available after maximum retries")
+        logger.error("Ensure: docker compose -f docker/docker-compose-unified.yml up -d")
+        logger.error("(or: docker compose -f docker-compose-airbyte.yml up -d)")
         return False
     
     # Step 2: Load configurations
@@ -620,8 +620,8 @@ def main():
         logger.info("OK: Configurations loaded successfully")
     except FileNotFoundError as e:
         logger.error(f" Configuration file not found: {e}")
-        logger.error(f"   Expected: {config_dir / 'source_mysql_staging.json'}")
-        logger.error(f"   Expected: {config_dir / 'destination_postgres_analytics.json'}")
+        logger.error(f" Expected: {config_dir / 'source_mysql_staging.json'}")
+        logger.error(f" Expected: {config_dir / 'destination_postgres_analytics.json'}")
         return False
     except json.JSONDecodeError as e:
         logger.error(f" Invalid JSON in configuration: {e}")
