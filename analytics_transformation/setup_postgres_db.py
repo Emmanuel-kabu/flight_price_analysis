@@ -68,12 +68,12 @@ else:
     POSTGRES_HOST = os.getenv("POSTGRES_HOST", "127.0.0.1")
     POSTGRES_PORT = int(os.getenv("POSTGRES_PORT", "5433"))
 
-POSTGRES_ADMIN_USER = os.getenv("POSTGRES_ADMIN_USER", os.getenv("POSTGRES_USER", "analytics_user"))
-POSTGRES_ADMIN_PASS = os.getenv("POSTGRES_ADMIN_PASS", os.getenv("POSTGRES_PASSWORD", "analytics_password"))
+POSTGRES_ADMIN_USER = os.getenv("POSTGRES_ADMIN_USER", os.getenv("POSTGRES_USER"))
+POSTGRES_ADMIN_PASS = os.getenv("POSTGRES_ADMIN_PASS", os.getenv("POSTGRES_PASSWORD"))
 
-ANALYTICS_DB = os.getenv("POSTGRES_DATABASE", "flight_price_analysis_analytics_db")
-ANALYTICS_USER = os.getenv("POSTGRES_USER", "analytics_user")
-ANALYTICS_PASSWORD = os.getenv("POSTGRES_PASSWORD", "analytics_password")
+ANALYTICS_DB = os.getenv("POSTGRES_DATABASE")
+ANALYTICS_USER = os.getenv("POSTGRES_USER")
+ANALYTICS_PASSWORD = os.getenv("POSTGRES_PASSWORD")
 ANALYTICS_SCHEMA = os.getenv("POSTGRES_SCHEMA", "public")
 
 POSTGRES_CONFIG = {
