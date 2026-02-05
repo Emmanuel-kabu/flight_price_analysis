@@ -4,7 +4,6 @@ This document provides **separate, focused architecture diagrams** for the proje
 1) logical/dataflow architecture
 2) runtime/environment architecture (containers, networks, ports, and how services talk to each other)
 
-> Diagrams are written in **Mermaid**. In VS Code, install a Mermaid preview extension (or view on GitHub, which renders Mermaid in Markdown).
 
 ---
 
@@ -128,3 +127,4 @@ FROM information_schema.tables
 WHERE table_name LIKE 'kpi_%'
 ORDER BY table_schema, table_name;
 ```
+
